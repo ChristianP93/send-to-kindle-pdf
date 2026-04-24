@@ -144,7 +144,8 @@ export async function fitPagesToTarget(options: FitOptions): Promise<FitResult> 
     // rather than silently dropping it or refusing to make progress.
     if (currentPages.length === 1) {
       logger.warn(
-        `[size] ${chunkLabel}: single page ${bytes.byteLength} bytes exceeds target ${targetBytes} — emitting anyway.`,
+        `[size] ${chunkLabel}: single page ${bytes.byteLength} bytes exceeds target ${targetBytes} — emitting anyway.` +
+          ' Re-run with --normalize if source PDFs share large embedded resources (fonts, images).',
       );
       return { bytes, pages: currentPages, overflow: pages.slice(1) };
     }

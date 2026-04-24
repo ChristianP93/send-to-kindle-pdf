@@ -5,6 +5,7 @@ import { PDFDocument } from 'pdf-lib';
 
 import { discoverPdfFiles, NoPdfFoundError } from './core/discovery.js';
 import { buildPdfForLeaf } from './core/images-to-pdf.js';
+import { normalizeSources } from './core/normalize.js';
 import { planChunks, type PlannerSource } from './core/planner.js';
 import { createSourceCache, fitPagesToTarget } from './core/sizer.js';
 import { discoverTree, type LeafUnit } from './core/tree-discovery.js';
@@ -34,6 +35,12 @@ export {
   TooManyFilesError,
 } from './core/tree-discovery.js';
 export { buildPdfForLeaf } from './core/images-to-pdf.js';
+export {
+  GhostscriptFailedError,
+  GhostscriptNotFoundError,
+  normalizeSources,
+  resolveGhostscript,
+} from './core/normalize.js';
 export {
   CounterOverflowError,
   InvalidPaddingError,
@@ -91,6 +98,7 @@ interface NormalizedOptions {
   readonly dryRun: boolean;
   readonly mode: RunMode | 'auto';
   readonly keepStaging: boolean;
+  readonly normalize: boolean;
   readonly logger: Logger;
 }
 
@@ -112,6 +120,7 @@ function normalizeOptions(options: PrepareForKindleOptions): NormalizedOptions {
     dryRun: options.dryRun ?? false,
     mode: options.mode ?? 'auto',
     keepStaging: options.keepStaging ?? false,
+    normalize: options.normalize ?? false,
     logger: options.verbose ? createLogger({ verbose: true }) : createLogger(),
   };
 }
@@ -293,6 +302,7 @@ async function preStageUnits(
  * @throws {NoUnitsFoundError} when the tree contains no usable leaves (tree mode)
  * @throws {OutputDirExistsError} when the output directory already exists and `force` is `false`
  * @throws {CounterOverflowError} when the required counter exceeds `10^padding - 1`
+ * @throws {GhostscriptNotFoundError} when `normalize: true` but `gs` is not on PATH
  */
 export async function prepareForKindle(
   options: PrepareForKindleOptions,
@@ -311,6 +321,7 @@ export async function prepareForKindle(
 
   const runMode: RunMode = tree.mode;
   let stageCleanup: (() => Promise<void>) | undefined;
+  let normalizeCleanup: (() => Promise<void>) | undefined;
   let stagingDir: string | undefined;
   let treeSkipped: { name: string; reason: string }[] = [...tree.skipped];
 
@@ -359,8 +370,32 @@ export async function prepareForKindle(
       files: discovery.files.length,
     });
 
+    // Normalize runs after discovery (reuses its filtering: symlinks skipped,
+    // 50k/1GB guards, natural sort) and before loadSourceMeta so the planner
+    // sees the post-normalization byte sizes — otherwise a bloated source with
+    // ~300 MB of shared resources would be planned as ~2 MB per page and
+    // explode at write-time (see `fitPagesToTarget` single-page warning).
+    let plannerFiles = discovery.files;
+    let normalizeSkipped: { name: string; reason: string }[] = [];
+    if (opts.normalize) {
+      opts.logger.info(`[info] normalize: pre-processing ${discovery.files.length} PDF(s)`);
+      const norm = await normalizeSources({
+        files: discovery.files,
+        logger: opts.logger,
+        keepStaging: opts.keepStaging,
+        ...(options.onProgress ? { onProgress: options.onProgress } : {}),
+      });
+      plannerFiles = norm.files;
+      normalizeCleanup = norm.cleanup;
+      normalizeSkipped = [...norm.skipped];
+      stagingDir = norm.stagingDir;
+      opts.logger.debug(
+        `[io] normalized ${norm.files.length}/${discovery.files.length} file(s) in ${norm.stagingDir}`,
+      );
+    }
+
     const { plannerSources, skipped: loadSkipped } = await loadSourceMeta(
-      discovery.files,
+      plannerFiles,
       opts.logger,
     );
 
@@ -368,6 +403,7 @@ export async function prepareForKindle(
       throw new NoReadablePdfsError(runMode, [
         ...treeSkipped,
         ...discovery.skipped,
+        ...normalizeSkipped,
         ...loadSkipped,
       ]);
     }
@@ -380,7 +416,12 @@ export async function prepareForKindle(
     emit(options.onProgress, { step: 'plan', chunks: plan.length });
 
     const inputTotalBytes = discovery.files.reduce((acc, f) => acc + f.size, 0);
-    const skippedAll = [...treeSkipped, ...discovery.skipped, ...loadSkipped];
+    const skippedAll = [
+      ...treeSkipped,
+      ...discovery.skipped,
+      ...normalizeSkipped,
+      ...loadSkipped,
+    ];
 
     if (opts.dryRun) {
       emit(options.onProgress, { step: 'done', outputs: plan.map((p) => p.outputName) });
@@ -486,11 +527,16 @@ export async function prepareForKindle(
 
     return { summary, plan: writtenPlan };
   } finally {
-    if (stageCleanup) {
-      try {
-        await stageCleanup();
-      } catch {
-        // best-effort cleanup
+    // Normalize staging can reference tree staging paths only via the
+    // already-completed copy step, so cleanup order is independent. Run both
+    // best-effort so one failure doesn't orphan the other temp dir.
+    for (const cleanup of [normalizeCleanup, stageCleanup]) {
+      if (cleanup) {
+        try {
+          await cleanup();
+        } catch {
+          // best-effort cleanup
+        }
       }
     }
   }
