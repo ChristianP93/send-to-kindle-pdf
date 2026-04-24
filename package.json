@@ -1,0 +1,87 @@
+{
+  "name": "send-to-kindle-pdf",
+  "version": "0.3.0",
+  "description": "Prepare PDFs for Amazon Send to Kindle: auto-merge small files and split large ones under the 200MB limit while preserving source order.",
+  "type": "module",
+  "bin": {
+    "send-to-kindle-pdf": "./dist/cli.js",
+    "kindle-pdf": "./dist/cli.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run test/unit",
+    "test:watch": "vitest test/unit",
+    "test:integration": "vitest run test/integration",
+    "test:all": "vitest run",
+    "coverage": "vitest run --coverage",
+    "coverage:integration": "vitest run test/integration --coverage",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "kindle",
+    "send-to-kindle",
+    "pdf",
+    "manga",
+    "ebook",
+    "split",
+    "merge",
+    "cli"
+  ],
+  "author": "ChristianP93",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChristianP93/send-to-kindle-pdf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChristianP93/send-to-kindle-pdf/issues"
+  },
+  "homepage": "https://github.com/ChristianP93/send-to-kindle-pdf#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "sideEffects": false,
+  "packageManager": "npm@11.6.0",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "natural-orderby": "^5.0.0",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^9.9.0",
+    "eslint-plugin-unicorn": "^55.0.0",
+    "prettier": "^3.3.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
