@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir, platform } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -98,7 +98,7 @@ describe('discoverTree', () => {
 
     expect(res.mode).toBe('tree');
     const labels = res.units.map((u) => u.label);
-    expect(labels[0]).toBe('Volume 01/cap-01');
+    expect(labels[0]).toBe(join('Volume 01', 'cap-01'));
     expect(labels[labels.length - 1]).toBe('extra.pdf');
   });
 
@@ -160,7 +160,7 @@ describe('discoverTree', () => {
     });
 
     const entries = res.units[0]!.entries;
-    const names = entries.map((e) => e.path.split('/').pop());
+    const names = entries.map((e) => basename(e.path));
     expect(names).toEqual(['1.jpg', '2.jpg', '10.png', '11.png']);
   });
 
@@ -234,8 +234,8 @@ describe('discoverTree', () => {
       });
 
       const unit = res.units.find((u) => u.label === 'Cap 1');
-      expect(unit?.entries.map((e) => e.path.split('/').pop())).toEqual(['real.pdf']);
-      expect(res.skipped.some((s) => s.name === 'Cap 1/link.pdf')).toBe(true);
+      expect(unit?.entries.map((e) => basename(e.path))).toEqual(['real.pdf']);
+      expect(res.skipped.some((s) => s.name === join('Cap 1', 'link.pdf'))).toBe(true);
     } finally {
       await rm(otherRoot, { recursive: true, force: true });
     }
