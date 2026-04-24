@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { Command, InvalidArgumentError } from 'commander';
 
 import {
+  GhostscriptFailedError,
+  GhostscriptNotFoundError,
   NoReadablePdfsError,
   OutputDirExistsError,
   TargetSizeError,
@@ -88,6 +90,11 @@ async function main(argv: readonly string[]): Promise<number> {
       'auto' as 'auto' | 'flat' | 'tree',
     )
     .option('--keep-staging', 'Do not remove the temp staging directory (debug)', false)
+    .option(
+      '--normalize',
+      'Re-process each source PDF through Ghostscript before packing (requires `gs` on PATH; fixes bloated outputs when sources share large embedded resources)',
+      false,
+    )
     .option('--verbose', 'Verbose debug logging', false)
     .action(
       async (
@@ -101,6 +108,7 @@ async function main(argv: readonly string[]): Promise<number> {
           dryRun: boolean;
           mode: 'auto' | 'flat' | 'tree';
           keepStaging: boolean;
+          normalize: boolean;
           verbose: boolean;
         },
       ) => {
@@ -115,6 +123,7 @@ async function main(argv: readonly string[]): Promise<number> {
           dryRun: opts.dryRun,
           mode: opts.mode,
           keepStaging: opts.keepStaging,
+          normalize: opts.normalize,
           verbose: opts.verbose,
           ...(onProgress ? { onProgress } : {}),
         });
@@ -178,7 +187,9 @@ function handleError(error: unknown): number {
     error instanceof NoReadablePdfsError ||
     error instanceof InputDirectoryError ||
     error instanceof OutputDirExistsError ||
-    error instanceof CounterOverflowError
+    error instanceof CounterOverflowError ||
+    error instanceof GhostscriptNotFoundError ||
+    error instanceof GhostscriptFailedError
   ) {
     process.stderr.write(`error: ${error.message}\n`);
     return EXIT_RUNTIME;

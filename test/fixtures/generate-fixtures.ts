@@ -11,6 +11,16 @@ export interface FixtureSpec {
   readonly name: string;
   readonly pageCount: number;
   readonly bytesPerPage: number;
+  /**
+   * When true, a single PNG is generated once and `embedPng`'d once, then
+   * referenced from every page. This mirrors the real-world "bloat" bug:
+   * pdf-lib's `copyPages` duplicates document-level shared resources when
+   * extracting even a single page, so a 3-page file where 1 page is ~80 KB
+   * and 3 pages together are ~80 KB + overhead becomes ~240 KB when each
+   * page is extracted individually — exercising the --normalize code path
+   * without needing 300 MB manga scans.
+   */
+  readonly sharedImage?: boolean;
 }
 
 // Scaled fixtures: we target ~500 KB / file as the natural integration "big"
@@ -20,6 +30,7 @@ export const FIXTURE_SPECS: readonly FixtureSpec[] = [
   { name: 'medium.pdf', pageCount: 80, bytesPerPage: 20 * KB },
   { name: 'huge.pdf', pageCount: 200, bytesPerPage: 20 * KB },
   { name: 'single-page-huge.pdf', pageCount: 1, bytesPerPage: 1200 * KB },
+  { name: 'shared-image-bloat.pdf', pageCount: 4, bytesPerPage: 80 * KB, sharedImage: true },
 ];
 
 export const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'generated');
@@ -122,11 +133,20 @@ async function generateFixture(spec: FixtureSpec): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const dims = dimensionForBytes(spec.bytesPerPage);
 
-  for (let i = 0; i < spec.pageCount; i += 1) {
+  if (spec.sharedImage) {
     const pngBytes = makeRandomGrayscalePng(dims.width, dims.height);
     const image = await doc.embedPng(pngBytes);
-    const page = doc.addPage([612, 792]);
-    page.drawImage(image, { x: 10, y: 10, width: 50, height: 50 });
+    for (let i = 0; i < spec.pageCount; i += 1) {
+      const page = doc.addPage([612, 792]);
+      page.drawImage(image, { x: 10, y: 10, width: 50, height: 50 });
+    }
+  } else {
+    for (let i = 0; i < spec.pageCount; i += 1) {
+      const pngBytes = makeRandomGrayscalePng(dims.width, dims.height);
+      const image = await doc.embedPng(pngBytes);
+      const page = doc.addPage([612, 792]);
+      page.drawImage(image, { x: 10, y: 10, width: 50, height: 50 });
+    }
   }
 
   return doc.save({ useObjectStreams: false });

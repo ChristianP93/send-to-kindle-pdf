@@ -40,6 +40,7 @@ export interface RunSummary {
 export type ProgressEvent =
   | { step: 'discovery'; mode: RunMode; files: number }
   | { step: 'stage'; index: number; total: number; label: string }
+  | { step: 'normalize'; index: number; total: number; filename: string }
   | { step: 'plan'; chunks: number }
   | { step: 'write'; index: number; total: number; filename: string }
   | { step: 'done'; outputs: readonly string[] };
@@ -57,6 +58,7 @@ export interface PrepareForKindleOptions {
   readonly verbose?: boolean;
   readonly mode?: PrepareMode;
   readonly keepStaging?: boolean;
+  readonly normalize?: boolean;
   readonly onProgress?: (event: ProgressEvent) => void;
 }
 

@@ -44,7 +44,8 @@ send-to-kindle-pdf <folder> <prefix> [options]
 | `--force` | `false` | Delete and recreate the output directory if it exists. |
 | `--dry-run` | `false` | Print the plan without writing files. |
 | `--mode <mode>` | `auto` | Discovery mode: `auto`, `flat`, or `tree`. |
-| `--keep-staging` | `false` | Keep the temp staging directory (debug; tree mode only). |
+| `--keep-staging` | `false` | Keep the temp staging directory (debug; tree / normalize modes). |
+| `--normalize` | `false` | Pre-process every source PDF through Ghostscript (see below). |
 | `--verbose` | `false` | Extra debug logging on stderr. |
 | `-v, --version` | | Print version. |
 | `-h, --help` | | Print help. |
@@ -205,6 +206,51 @@ temp directory. The temp directory is removed at the end of the run (use
 To avoid runaway scans on pathological inputs, discovery aborts with an
 error if the directory tree is deeper than **32 levels**, or if it contains
 more than **50 000** files in scope.
+
+## Normalizing bloated source PDFs (`--normalize`)
+
+Some scanned libraries (notably Manga Edge releases) ship PDFs with large
+resources — image XObjects, embedded fonts — stored at document level and
+shared across every page. `pdf-lib` (the underlying PDF engine) duplicates
+those document-level resources into the destination whenever it extracts
+pages. The result: a 300 MB source becomes ~300 MB *per extracted page*, and
+the packer produces dozens of single-page outputs each over the 200 MB limit.
+
+If you see warnings like:
+
+```
+[size] file.pdf: single page 302539004 bytes exceeds target 188743680 — emitting anyway.
+```
+
+…re-run with `--normalize`. Every source PDF is first re-processed through
+Ghostscript (`-dPDFSETTINGS=/ebook`, images rasterised at 150 dpi) into a
+temp directory; the normal packing pipeline then runs on those normalised
+copies.
+
+### Requirements
+
+Ghostscript must be on `PATH`:
+
+- macOS: `brew install ghostscript`
+- Debian/Ubuntu: `sudo apt install ghostscript`
+- Windows: [ghostscript.com/releases](https://ghostscript.com/releases/) (looked up as `gswin64c.exe` / `gswin32c.exe`)
+
+### Trade-offs
+
+- **Slow**: Ghostscript is CPU-bound single-threaded; the tool runs up to 4
+  workers in parallel but a 2.5 GB library still takes several minutes.
+- **Lossy**: images are downsampled to 150 dpi. This is above the effective
+  display density of a 6″ Kindle, so quality loss is imperceptible for
+  manga/comics. If you need pixel-perfect output, don't pass `--normalize` —
+  but you'll only hit the bloat issue on sources that already need it.
+- **Applies to every source**: there is no per-file opt-in. For
+  tree-mode libraries built from images this is a near-no-op and safe.
+
+### Example
+
+```bash
+send-to-kindle-pdf ~/Downloads/witch-hat-atelier witch-hat --normalize
+```
 
 ## Algorithm
 

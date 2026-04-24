@@ -5,7 +5,7 @@ export interface CliProgressOptions {
   readonly enabled?: boolean;
 }
 
-type Phase = 'discovery' | 'stage' | 'plan' | 'write' | 'done';
+type Phase = 'discovery' | 'stage' | 'normalize' | 'plan' | 'write' | 'done';
 
 const CLEAR_LINE = '\r\x1b[2K';
 
@@ -68,6 +68,13 @@ export function createCliProgress(
       case 'stage': {
         const label = truncate(event.label, 60);
         const line = `[stage  ${event.index}/${event.total}] ${label}`;
+        if (ttyEnabled) writeInline(line);
+        else writeFallback(line);
+        return;
+      }
+      case 'normalize': {
+        const name = truncate(event.filename, 60);
+        const line = `[normalize ${event.index}/${event.total}] ${name}`;
         if (ttyEnabled) writeInline(line);
         else writeFallback(line);
         return;
