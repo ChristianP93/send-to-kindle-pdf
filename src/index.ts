@@ -416,12 +416,7 @@ export async function prepareForKindle(
     emit(options.onProgress, { step: 'plan', chunks: plan.length });
 
     const inputTotalBytes = discovery.files.reduce((acc, f) => acc + f.size, 0);
-    const skippedAll = [
-      ...treeSkipped,
-      ...discovery.skipped,
-      ...normalizeSkipped,
-      ...loadSkipped,
-    ];
+    const skippedAll = [...treeSkipped, ...discovery.skipped, ...normalizeSkipped, ...loadSkipped];
 
     if (opts.dryRun) {
       emit(options.onProgress, { step: 'done', outputs: plan.map((p) => p.outputName) });
