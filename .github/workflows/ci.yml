@@ -58,7 +58,7 @@ jobs:
           path: test/fixtures/generated
           key: fixtures-${{ hashFiles('test/fixtures/generate-fixtures.ts') }}
       - run: npm ci
-      - run: npm run coverage:integration
+      - run: npm run coverage
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
