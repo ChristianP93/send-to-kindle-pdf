@@ -80,41 +80,49 @@ describe('integration: --normalize (real Ghostscript)', () => {
     120_000,
   );
 
-  it.skipIf(!gsAvailable)('emits normalize progress events in input order', async () => {
-    await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'a.pdf'));
-    await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'b.pdf'));
-    await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'c.pdf'));
+  it.skipIf(!gsAvailable)(
+    'emits normalize progress events in input order',
+    async () => {
+      await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'a.pdf'));
+      await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'b.pdf'));
+      await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'c.pdf'));
 
-    const normalizeFilenames: string[] = [];
-    await prepareForKindle({
-      inputDir: input,
-      prefix: 'np',
-      targetSizeMb: 10,
-      force: true,
-      normalize: true,
-      onProgress: (e) => {
-        if (e.step === 'normalize') normalizeFilenames.push(e.filename);
-      },
-    });
+      const normalizeFilenames: string[] = [];
+      await prepareForKindle({
+        inputDir: input,
+        prefix: 'np',
+        targetSizeMb: 10,
+        force: true,
+        normalize: true,
+        onProgress: (e) => {
+          if (e.step === 'normalize') normalizeFilenames.push(e.filename);
+        },
+      });
 
-    expect(normalizeFilenames).toEqual(['a.pdf', 'b.pdf', 'c.pdf']);
-  }, 120_000);
+      expect(normalizeFilenames).toEqual(['a.pdf', 'b.pdf', 'c.pdf']);
+    },
+    120_000,
+  );
 
-  it.skipIf(!gsAvailable)('preserves the staging dir when --keep-staging is set', async () => {
-    await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'a.pdf'));
+  it.skipIf(!gsAvailable)(
+    'preserves the staging dir when --keep-staging is set',
+    async () => {
+      await copyFile(join(FIXTURE_DIR, 'tiny.pdf'), join(input, 'a.pdf'));
 
-    const { summary } = await prepareForKindle({
-      inputDir: input,
-      prefix: 'ks',
-      targetSizeMb: 10,
-      force: true,
-      normalize: true,
-      keepStaging: true,
-    });
+      const { summary } = await prepareForKindle({
+        inputDir: input,
+        prefix: 'ks',
+        targetSizeMb: 10,
+        force: true,
+        normalize: true,
+        keepStaging: true,
+      });
 
-    expect(summary.stagingDir).toBeTruthy();
-    const kept = await stat(summary.stagingDir!);
-    expect(kept.isDirectory()).toBe(true);
-    await rm(summary.stagingDir!, { recursive: true, force: true });
-  }, 120_000);
+      expect(summary.stagingDir).toBeTruthy();
+      const kept = await stat(summary.stagingDir!);
+      expect(kept.isDirectory()).toBe(true);
+      await rm(summary.stagingDir!, { recursive: true, force: true });
+    },
+    120_000,
+  );
 });

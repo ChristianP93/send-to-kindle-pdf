@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir, platform } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -25,10 +25,10 @@ describe('discoverTree', () => {
   });
 
   async function touch(rel: string): Promise<void> {
-    const path = join(root, rel);
-    const parent = path.substring(0, path.lastIndexOf('/'));
-    if (parent && parent !== root) await mkdir(parent, { recursive: true });
-    await writeFile(path, 'x');
+    const filePath = join(root, rel);
+    const parent = dirname(filePath);
+    if (parent !== root) await mkdir(parent, { recursive: true });
+    await writeFile(filePath, 'x');
   }
 
   it('returns flat mode when root has only PDFs at top level', async () => {

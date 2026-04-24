@@ -155,9 +155,9 @@ describe('resolveGhostscript', () => {
   });
 
   it('handles missing PATH env gracefully', async () => {
-    await expect(
-      resolveGhostscript({ env: {}, platform: 'linux' }),
-    ).rejects.toBeInstanceOf(GhostscriptNotFoundError);
+    await expect(resolveGhostscript({ env: {}, platform: 'linux' })).rejects.toBeInstanceOf(
+      GhostscriptNotFoundError,
+    );
   });
 });
 
