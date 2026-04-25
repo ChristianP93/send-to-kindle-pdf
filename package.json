@@ -1,6 +1,6 @@
 {
   "name": "send-to-kindle-pdf",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Prepare PDFs for Amazon Send to Kindle: auto-merge small files and split large ones under the 200MB limit while preserving source order.",
   "type": "module",
   "bin": {
