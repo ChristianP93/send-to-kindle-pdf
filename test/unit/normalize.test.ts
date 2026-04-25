@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { chmod, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir, platform } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { ChildProcess, spawn as SpawnFn } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -214,7 +214,7 @@ describe('normalizeSources', () => {
     const delays: Record<string, number> = { 'a.pdf': 40, 'b.pdf': 20, 'c.pdf': 5 };
     const { spawn } = makeFakeSpawn((call) => {
       const out = call.args.find((a) => a.startsWith('-sOutputFile='))!;
-      const name = out.split('/').pop()!;
+      const name = basename(out);
       return { exitCode: 0, delayMs: delays[name] ?? 0 };
     });
 
